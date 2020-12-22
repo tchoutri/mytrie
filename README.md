@@ -3,34 +3,29 @@
 Many other Haskell implementations of Tries have the structure of the datatype as such:
 
 ```Haskell
-data Trie =
-  Trie
-  Bool
-  (HashMap Char Trie)
+data Trie = Bottom | Internal (HashMap Char Trie)
 ```
 
-With the Bool part acting as a Flag, telling us that we have arrived to the bottom of a branch.
+In this implementation, the `Bottom` constructor represents the end of a path.
 Other languages like Python may represent such a thing by using a special character like '\*' pointing to a null value.
-
-In this implementation, the flag is not matched upon nor returned. Instead,
-an empty HashMap is set in place to indicate the bottom of a branch.
 
 For instance, consider the `member` function:
 
 ```haskell
 member :: Text -> Trie -> Bool
-member text = go (T.head text) (T.tail text)  -- (1)
+member text = go (T.head text) (T.tail text) -- (1)
   where
     go :: Char -> Text -> Trie -> Bool
-    go x xs (Trie  hm) | T.null xs =          -- (2)
+    go x xs (Internal  hm) | T.null xs =     -- (2)
       case HM.lookup x hm of
         Nothing -> False
         Just _  -> True
-    go x xs (Trie  hm) =                      -- (3)
+    go x xs (Internal  hm) =                 -- (3)
       let newHead = T.head xs
           newTail = T.tail xs
        in Just True == (go newHead newTail <$> HM.lookup x hm)
        --    ^____ (3c)     ^____ (3b)            ^___ (3a)
+    go _ _ Bottom = False                    -- (4)
 ```
 
 In (1), we delegate the recursion to a helper function called `go`, by explicitly
@@ -55,3 +50,6 @@ contained whithin the Trie.
 
 And thus, (3c) is the final comparison between what we expect to be a happy result,
 `Just True`, and the result of said comparison is the Boolean that we get at the end.
+
+Finally, (4) indicates the moment where we stumble on a too-short word path.  
+The word we are looking for is not fully inserted in the Trie.
